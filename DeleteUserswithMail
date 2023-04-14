@@ -1,0 +1,24 @@
+Import-Module ActiveDirectory
+##OU Search Base Definition
+$OUSelection = ""
+
+##Define for Mail send
+$ToAddress = ""
+$SMTPServer = ""
+$FromAddress = ""
+
+##Set cut off for user deletion - any users last modified older than specified day will be deleted.
+$cutoffDate = (Get-Date).AddDays(-30)
+
+$disabledUsers = Search-ADAccount -AccountDisabled -SearchBase $OUSelection -SearchScope OneLevel | Where-Object {$_.LastLogonDate -lt $cutoffDate}
+
+foreach ($user in $disabledUsers) {
+    Remove-ADUser $user -Confirm:$false
+}
+
+$emailMessage = "The following users were deleted from Active Directory:`n`n"
+foreach ($user in $disabledUsers) {
+    $emailMessage += $user.Name + "`n"
+}
+
+Send-MailMessage -To $ToAddress -Subject "Deleted AD Users" -Body $emailMessage -SmtpServer $SMTPServer -From $FromAddress
